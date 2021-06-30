@@ -37,6 +37,8 @@ contract VotingEscrowToken is ERC20UpgradeSafe, OwnableUpgradeSafe, IVotingEscro
 
     event Deposit(address indexed provider, uint256 value, uint256 locktime, uint256 timestamp);
     event Withdraw(address indexed provider, uint256 value, uint256 timestamp);
+    event UpdateMintLockedAmount(uint256 newValue);
+    event UpdateEarlyWithdrawFeeRate(uint256 newValue);
 
     modifier lock() {
         require(_unlocked == 1, "LOCKED");
@@ -45,7 +47,7 @@ contract VotingEscrowToken is ERC20UpgradeSafe, OwnableUpgradeSafe, IVotingEscro
         _unlocked = 1;
     }
 
-    function initialize(string memory _name, string memory _symbol, address _lockedToken, uint256 _minLockedAmount) public initializer {
+    function initialize(string memory _name, string memory _symbol, address _lockedToken, uint256 _minLockedAmount) external initializer {
         __ERC20_init(_name, _symbol);
         OwnableUpgradeSafe.__Ownable_init();
         lockedToken = _lockedToken;
@@ -56,11 +58,13 @@ contract VotingEscrowToken is ERC20UpgradeSafe, OwnableUpgradeSafe, IVotingEscro
 
     function setMinLockedAmount(uint256 _minLockedAmount) external onlyOwner {
         minLockedAmount = _minLockedAmount;
+        emit UpdateMintLockedAmount(_minLockedAmount);
     }
 
     function setEarlyWithdrawFeeRate(uint256 _earlyWithdrawFeeRate) external onlyOwner {
         require(_earlyWithdrawFeeRate <= 5000, "too high"); // <= 50%
         earlyWithdrawFeeRate = _earlyWithdrawFeeRate;
+        emit UpdateEarlyWithdrawFeeRate(_earlyWithdrawFeeRate);
     }
 
     function burn(uint256 _amount) external {

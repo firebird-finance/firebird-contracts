@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 
-contract mHopeStakingPool is OwnableUpgradeSafe {
+contract MHopeStakingPool is OwnableUpgradeSafe {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -47,21 +47,25 @@ contract mHopeStakingPool is OwnableUpgradeSafe {
     event Withdraw(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
     event RewardPaid(address rewardToken, address indexed user, uint256 amount);
+    event UpdateExchangeProxy(address newValue);
+    event UpdateRewardPerSecond(uint256 newValue);
+    event UpdateEndRewardTime(uint256 newValue);
+    event UpdateReserveFund(address newValue);
 
     /* ========== Modifiers =============== */
 
     modifier onlyExchangeProxy() {
-        require(exchangeProxy == msg.sender || owner() == msg.sender, "mHopeStakingPool: caller is not the exchangeProxy");
+        require(exchangeProxy == msg.sender || owner() == msg.sender, "MHopeStakingPool: caller is not the exchangeProxy");
         _;
     }
 
     modifier onlyReserveFund() {
-        require(reserveFund == msg.sender || owner() == msg.sender, "mHopeStakingPool: caller is not the reserveFund");
+        require(reserveFund == msg.sender || owner() == msg.sender, "MHopeStakingPool: caller is not the reserveFund");
         _;
     }
 
     modifier lock() {
-        require(_locked == 0, 'mHopeStakingPool: LOCKED');
+        require(_locked == 0, 'MHopeStakingPool: LOCKED');
         _locked = 1;
         _;
         _locked = 0;
@@ -69,7 +73,7 @@ contract mHopeStakingPool is OwnableUpgradeSafe {
 
     /* ========== GOVERNANCE ========== */
 
-    function initialize(address _stakeToken, address _rewardToken, uint256 _startRewardTime) public initializer {
+    function initialize(address _stakeToken, address _rewardToken, uint256 _startRewardTime) external initializer {
         require(now < _startRewardTime, "late");
         OwnableUpgradeSafe.__Ownable_init();
 
@@ -89,10 +93,12 @@ contract mHopeStakingPool is OwnableUpgradeSafe {
 
     function setExchangeProxy(address _exchangeProxy) external onlyExchangeProxy {
         exchangeProxy = _exchangeProxy;
+        emit UpdateExchangeProxy(_exchangeProxy);
     }
 
     function setReserveFund(address _reserveFund) external onlyReserveFund {
         reserveFund = _reserveFund;
+        emit UpdateReserveFund(_reserveFund);
     }
 
     /* ========== VIEW FUNCTIONS ========== */
@@ -137,6 +143,7 @@ contract mHopeStakingPool is OwnableUpgradeSafe {
             uint256 _newPendingReward = rewardPerSecond.mul(_pendingSeconds).add(_addedReward);
             uint256 _newPendingSeconds = _pendingSeconds.add(_days.mul(1 days));
             rewardPerSecond = _newPendingReward.div(_newPendingSeconds);
+            emit UpdateRewardPerSecond(rewardPerSecond);
         }
         if (_days > 0) {
             if (endRewardTime < now) {
@@ -144,7 +151,9 @@ contract mHopeStakingPool is OwnableUpgradeSafe {
             } else {
                 endRewardTime = endRewardTime.add(_days.mul(1 days));
             }
+            emit UpdateEndRewardTime(endRewardTime);
         }
+
     }
 
     function updateReward() public {
